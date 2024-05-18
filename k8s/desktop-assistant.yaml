@@ -1,14 +1,9 @@
 apiVersion: v1
-kind: Service
+kind: ConfigMap
 metadata:
-  name: desktop-assistant-service
-spec:
-  selector:
-    app: desktop-assistant
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
+  name: desktop-assistant-config
+data:
+  MOUNT_POINT: /mnt/c/Users/lowIQ/Downloads
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,7 +21,8 @@ spec:
     spec:
       containers:
         - name: desktop-assistant
-          image: desktop-assistant-image:v1.0.0
+          image: localhost/desktop-assistant-image:34
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           envFrom:
@@ -34,9 +30,20 @@ spec:
                 name: desktop-assistant-config
           volumeMounts:
             - name: host-volume
-              mountPath: /c/Users/lowIQ/Downloads
+              mountPath: /mnt/c/Users/lowIQ/Downloads
       volumes:
         - name: host-volume
-          hostPath:
-            path: /mnt/c/Users/lowIQ/Downloads
-            type: Directory
+          persistentVolumeClaim:
+            claimName: host-volume-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: desktop-assistant-service
+spec:
+  selector:
+    app: desktop-assistant
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

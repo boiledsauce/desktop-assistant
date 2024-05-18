@@ -3,4 +3,4 @@ kind: ConfigMap
 metadata:
   name: desktop-assistant-config
 data:
-  MOUNT_POINT: "/c/Users/lowIQ/Downloads"
+  MOUNT_POINT: "/mnt/c/Users/lowIQ/Downloads"

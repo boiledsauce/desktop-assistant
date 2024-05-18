@@ -28,3 +28,11 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+#k8stemp
+k8stemp
+
+jenkins.war
+
+cmd/server/app/server.exe
+cmd/server/app/server

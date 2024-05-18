@@ -1,11 +1,10 @@
-// handler/file_handler.go
-
 package handler
 
 import (
 	"desktop-assistant/internal/app/usecase"
 	"desktop-assistant/internal/domain"
 	"fmt"
+	"log"
 
 	"github.com/labstack/echo/v4"
 )
@@ -49,14 +48,17 @@ func (fh *FileHandler) HandleFileEvents(c echo.Context) error {
 		case event := <-fh.fileEventUseCase.FileDownloadFinishedChannel():
 			// Format the event data
 			data := fmt.Sprintf("data: %v\n\n", event)
+			log.Printf("Sending event: %s", data) // Log the event being sent
 
 			// Send the event to the client
 			if _, err := c.Response().Write([]byte(data)); err != nil {
+				log.Printf("Error writing response: %v", err) // Log the error
 				return err
 			}
 			c.Response().Flush()
 		case <-disconnected:
 			// The client disconnected, so stop handling events
+			log.Println("Client disconnected") // Log the disconnection
 			return nil
 		}
 	}
