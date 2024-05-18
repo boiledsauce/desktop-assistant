@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: desktop-assistant-service
+spec:
+  selector:
+    app: desktop-assistant
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: desktop-assistant-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: desktop-assistant
+  template:
+    metadata:
+      labels:
+        app: desktop-assistant
+    spec:
+      containers:
+        - name: desktop-assistant
+          image: desktop-assistant-image:v1.0.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: desktop-assistant-config
+          volumeMounts:
+            - name: host-volume
+              mountPath: /c/Users/lowIQ/Downloads
+      volumes:
+        - name: host-volume
+          hostPath:
+            path: /mnt/c/Users/lowIQ/Downloads
+            type: Directory

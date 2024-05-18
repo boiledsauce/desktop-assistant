@@ -15,6 +15,7 @@ type FileEventUseCase struct {
 	watcher              *repository.FileWatcher
 	files                map[string]*domain.File
 	fileDownloadFinished chan *domain.File
+	once                 sync.Once
 	mu                   sync.Mutex
 }
 
@@ -60,8 +61,9 @@ func (feuc *FileEventUseCase) HandleFileEvents() {
 
 func (feuc *FileEventUseCase) handleEvent(event domain.FileEvent) {
 	log.Printf("Detected file change: %s, Event: %v", event.Path, event.Type)
-	go feuc.checkDownloads()
-
+	feuc.once.Do(func() {
+		go feuc.checkDownloads()
+	})
 	// You can expand this function to perform different actions based on the event type
 	switch event.Type {
 	case domain.Create:
@@ -85,7 +87,7 @@ func (feuc *FileEventUseCase) checkDownloads() {
 	// Make goroutine only once
 	for {
 		time.Sleep(1 * time.Second) // Check every second
-
+		log.Println("Checking for files...")
 		feuc.mu.Lock()
 		for _, file := range feuc.files {
 			if file.IsDownloadFinished(time.Now()) {
@@ -101,7 +103,7 @@ func (feuc *FileEventUseCase) checkDownloads() {
 func (feuc *FileEventUseCase) create(event domain.FileEvent) *domain.File {
 	file := &domain.File{Path: event.Path, LastWrite: event.Timestamp, Hash: "placeholder"}
 	feuc.mu.Lock()
-	defer feuc.mu.Lock()
+	defer feuc.mu.Unlock()
 
 	feuc.files[event.Path] = file
 	return file
@@ -109,7 +111,7 @@ func (feuc *FileEventUseCase) create(event domain.FileEvent) *domain.File {
 
 func (feuc *FileEventUseCase) write(event domain.FileEvent) error {
 	feuc.mu.Lock()
-	defer feuc.mu.Lock()
+	defer feuc.mu.Unlock()
 
 	file, ok := feuc.files[event.Path]
 	if !ok {
@@ -122,7 +124,7 @@ func (feuc *FileEventUseCase) write(event domain.FileEvent) error {
 
 func (feuc *FileEventUseCase) remove(event domain.FileEvent) {
 	feuc.mu.Lock()
-	defer feuc.mu.Lock()
+	defer feuc.mu.Unlock()
 
 	delete(feuc.files, event.Path)
 	feuc.files[event.Path] = nil

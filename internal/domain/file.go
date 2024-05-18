@@ -2,6 +2,7 @@
 package domain
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -21,5 +22,7 @@ type FileRepository interface {
 
 func (f *File) IsDownloadFinished(currentTime time.Time) bool {
 	// If it's been more than 5 seconds since the last write, assume the download has finished
+	// print how long it is left
+	fmt.Println("TIME UNTIL IT IS DONE: ", TIME_UNTIL_DOWNLOADED-time.Since(f.LastWrite))
 	return time.Since(f.LastWrite) > TIME_UNTIL_DOWNLOADED
 }
