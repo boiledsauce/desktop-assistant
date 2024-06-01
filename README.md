@@ -22,7 +22,7 @@ Port forward the kubernetes pod by
 
 ```
 kubectl get pods
-kubectl port-forward <pod name> 8080:8080
+kubectl port-forward <pod name> 8081:8080
 The pod should now be ready for outwards connections
 ```
 
