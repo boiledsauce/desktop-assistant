@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: desktop-assistant
-          image: desktop-assistant-image:45
+          image: desktop-assistant-image:46
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

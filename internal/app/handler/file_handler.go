@@ -3,6 +3,7 @@ package handler
 import (
 	"desktop-assistant/internal/app/usecase"
 	"desktop-assistant/internal/domain"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -46,8 +47,15 @@ func (fh *FileHandler) HandleFileEvents(c echo.Context) error {
 	for {
 		select {
 		case event := <-fh.fileEventUseCase.FileDownloadFinishedChannel():
+			// Convert the event to a JSON string
+			eventJson, err := json.Marshal(event)
+			if err != nil {
+				log.Printf("Error marshaling event: %v", err) // Log the error
+				return err
+			}
+
 			// Format the event data
-			data := fmt.Sprintf("data: %v\n\n", event)
+			data := fmt.Sprintf("data: %s\n\n", eventJson)
 			log.Printf("Sending event: %s", data) // Log the event being sent
 
 			// Send the event to the client

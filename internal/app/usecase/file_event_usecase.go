@@ -1,29 +1,30 @@
-// usecase/file_event_usecase.go
-
 package usecase
 
 import (
+	"crypto/sha256"
 	"desktop-assistant/infra/repository"
 	"desktop-assistant/internal/domain"
 	"fmt"
 	"log"
+	"os"
+	"regexp"
 	"sync"
 	"time"
 )
 
 type FileEventUseCase struct {
-	watcher              *repository.FileWatcher
+	watcher              *repository.FileWatcherPolling
 	files                map[string]*domain.File
 	fileDownloadFinished chan *domain.File
 	once                 sync.Once
 	mu                   sync.Mutex
 }
 
-func NewFileEventUseCase(watcher *repository.FileWatcher) *FileEventUseCase {
+func NewFileEventUseCase(watcher *repository.FileWatcherPolling) *FileEventUseCase {
 	return &FileEventUseCase{
 		watcher:              watcher,
 		files:                make(map[string]*domain.File),
-		fileDownloadFinished: make(chan *domain.File),
+		fileDownloadFinished: make(chan *domain.File, 10), // Buffered channel to avoid blocking
 	}
 }
 
@@ -47,14 +48,6 @@ func (feuc *FileEventUseCase) HandleFileEvents() {
 				}
 				log.Printf("Watcher error: %v", err)
 			}
-		}
-	}()
-
-	go func() {
-		for file := range feuc.fileDownloadFinished {
-			// Here you can take actions on the finalized file
-			// For example, you can send an HTTP response or notify other parts of your program
-			log.Println("Received finished download:", file.Path)
 		}
 	}()
 }
@@ -90,10 +83,16 @@ func (feuc *FileEventUseCase) checkDownloads() {
 		log.Println("Checking for files...")
 		feuc.mu.Lock()
 		for _, file := range feuc.files {
-			if file.IsDownloadFinished(time.Now()) {
+			if file.IsDownloadFinished(time.Now()) && isDuplicateFilename(file.Path) {
+				log.Printf("Duplicate file detected: %s", file.Path)
 				log.Println("Download finished:", file.Path)
+				select {
+				case feuc.fileDownloadFinished <- file:
+					log.Printf("Sent file download finished event: %s", file.Path)
+				default:
+					log.Printf("Channel is full, dropping event: %s", file.Path)
+				}
 				delete(feuc.files, file.Path)
-				feuc.fileDownloadFinished <- file
 			}
 		}
 		feuc.mu.Unlock()
@@ -101,12 +100,29 @@ func (feuc *FileEventUseCase) checkDownloads() {
 }
 
 func (feuc *FileEventUseCase) create(event domain.FileEvent) *domain.File {
-	file := &domain.File{Path: event.Path, LastWrite: event.Timestamp, Hash: "placeholder"}
+	file := &domain.File{Path: event.Path, LastWrite: event.Timestamp, Hash: feuc.hashFile(event.Path)}
 	feuc.mu.Lock()
 	defer feuc.mu.Unlock()
 
+	for _, existingFile := range feuc.files {
+		if isDuplicateFilename(existingFile.Path) {
+			log.Printf("Duplicate file created: %s", file.Path)
+			// Send duplicate file event
+		}
+	}
+
 	feuc.files[event.Path] = file
 	return file
+}
+
+func (feuc *FileEventUseCase) hashFile(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Printf("Failed to read file for hashing: %v", err)
+		return ""
+	}
+	hash := sha256.Sum256(data)
+	return fmt.Sprintf("%x", hash)
 }
 
 func (feuc *FileEventUseCase) write(event domain.FileEvent) error {
@@ -127,17 +143,18 @@ func (feuc *FileEventUseCase) remove(event domain.FileEvent) {
 	defer feuc.mu.Unlock()
 
 	delete(feuc.files, event.Path)
-	feuc.files[event.Path] = nil
 }
 
 func (feuc *FileEventUseCase) rename(event domain.FileEvent) {
-	fmt.Println("Renamed")
+	log.Println("Renamed event:", event.Path)
 }
 
 func (feuc *FileEventUseCase) unknown(event domain.FileEvent) {
 	log.Println("Unknown event type")
 }
 
-func (feuc *FileEventUseCase) def(event domain.FileEvent) {
-	log.Println("Default event type")
+func isDuplicateFilename(filename string) bool {
+	// Regex pattern to find "(number)" before the file extension
+	pattern := regexp.MustCompile(`\(\d+\)\.\w+$`)
+	return pattern.MatchString(filename)
 }
