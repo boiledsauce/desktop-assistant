@@ -83,14 +83,16 @@ func (feuc *FileEventUseCase) checkDownloads() {
 		log.Println("Checking for files...")
 		feuc.mu.Lock()
 		for _, file := range feuc.files {
-			if file.IsDownloadFinished(time.Now()) && isDuplicateFilename(file.Path) {
-				log.Printf("Duplicate file detected: %s", file.Path)
+			if file.IsDownloadFinished(time.Now()) {
 				log.Println("Download finished:", file.Path)
-				select {
-				case feuc.fileDownloadFinished <- file:
-					log.Printf("Sent file download finished event: %s", file.Path)
-				default:
-					log.Printf("Channel is full, dropping event: %s", file.Path)
+				if isDuplicateFilename(file.Path) {
+					log.Println("Duplicate found:", file.Path)
+					select {
+					case feuc.fileDownloadFinished <- file:
+						log.Printf("Sent file download finished event: %s", file.Path)
+					default:
+						log.Printf("Channel is full, dropping event: %s", file.Path)
+					}
 				}
 				delete(feuc.files, file.Path)
 			}
