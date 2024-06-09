@@ -57,6 +57,7 @@ func (feuc *FileEventUseCase) handleEvent(event domain.FileEvent) {
 	feuc.once.Do(func() {
 		go feuc.checkDownloads()
 	})
+
 	// You can expand this function to perform different actions based on the event type
 	switch event.Type {
 	case domain.Create:
