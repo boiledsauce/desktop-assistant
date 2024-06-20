@@ -11,6 +11,8 @@ const TIME_UNTIL_DOWNLOADED = 5 * time.Second
 type File struct {
 	Path      string    `json:"path"`
 	Hash      string    `json:"hash"`
+	Content   []byte    `json:"_"`
+	Size      int64     `json:"size"`
 	LastWrite time.Time `json:"last_write"`
 }
 
