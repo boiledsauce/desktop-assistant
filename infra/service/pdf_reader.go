@@ -65,7 +65,7 @@ func (p *PDFReaderImpl) ConvertTextToPdf(text string) ([]byte, error) {
 
 	pdfWriter.Cell(0, 0, "Name")
 	pdfWriter.Ln(0.5)
-	pdfWriter.Cell(0, 0, "Address")
+	pdfWriter.Cell(0, 0, "Adress")
 	pdfWriter.Ln(0.5)
 	pdfWriter.Cell(0, 0, "User Postal")
 	pdfWriter.Ln(1)
